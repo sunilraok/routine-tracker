@@ -408,6 +408,10 @@ body {
   border-color: var(--primary);
 }
 
+.login-card .save-btn {
+  width: 100%;
+}
+
 .auth-error {
   color: #ef4444;
   font-size: 0.8125rem;
