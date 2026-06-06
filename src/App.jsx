@@ -213,11 +213,16 @@ function TrackerApp({ session }) {
   return (
     <div className="app">
       <header className="header">
-        <h1>Routine Tracker</h1>
-        <div className="header-right">
-          <span className="week-range">{getWeekRange()}</span>
-          <button className="sign-out-btn" onClick={handleSignOut}>Sign out</button>
+        <div className="header-top">
+          <h1>Routine Tracker</h1>
+          <div className="user-info">
+            <span className="user-name">
+              {session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email}
+            </span>
+            <button className="sign-out-btn" onClick={handleSignOut}>Sign out</button>
+          </div>
         </div>
+        <span className="week-range">{getWeekRange()}</span>
       </header>
 
       <div className="stats">
