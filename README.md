@@ -14,7 +14,7 @@ Stay on top of your daily and weekly habits with Routine Tracker — a simple, f
 
 ## How to use it
 
-1. Visit the app at [routine-tracker.vercel.app](https://routine-tracker.vercel.app)
+1. Visit the app at [routine-tracker-liard.vercel.app](https://routine-tracker-liard.vercel.app)
 2. Sign in with **Google** or create an account with your email
 3. Tap the **+** button to add your first routine
 4. Choose a name, pick how often you want to do it, and save
