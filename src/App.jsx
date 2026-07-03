@@ -94,6 +94,7 @@ function TrackerApp({ session }) {
   const [completions, setCompletions] = useState(new Set());
   const [showModal, setShowModal] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
+  const [view, setView] = useState('routines');
 
   const today = getDayOfWeek();
 
@@ -225,61 +226,71 @@ function TrackerApp({ session }) {
         <span className="week-range">{getWeekRange()}</span>
       </header>
 
-      <div className="stats">
-        <div className="stats-label">
-          <span>Weekly Progress</span>
-          <span>{stats.completed}/{stats.total} ({stats.percentage}%)</span>
-        </div>
-        <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${stats.percentage}%` }} />
-        </div>
+      <div className="tab-nav">
+        <button className={`tab ${view === 'routines' ? 'active' : ''}`} onClick={() => setView('routines')}>Routines</button>
+        <button className={`tab ${view === 'dashboard' ? 'active' : ''}`} onClick={() => setView('dashboard')}>Dashboard</button>
       </div>
 
-      <main className="main">
-        {tasks.length === 0 ? (
-          <div className="empty-state">
-            <p>No routines yet</p>
-            <p className="empty-hint">Tap + to add your first routine</p>
+      {view === 'routines' && (
+        <>
+          <div className="stats">
+            <div className="stats-label">
+              <span>Weekly Progress</span>
+              <span>{stats.completed}/{stats.total} ({stats.percentage}%)</span>
+            </div>
+            <div className="progress-bar">
+              <div className="progress-fill" style={{ width: `${stats.percentage}%` }} />
+            </div>
           </div>
-        ) : (
-          <>
-            {groupedTasks.daily.length > 0 && (
-              <section className="task-section">
-                <h2>Daily</h2>
-                {groupedTasks.daily.map(task => (
-                  <TaskCard key={task.id} task={task} label={getFrequencyLabel(task)}
-                    completed={isCompleted(task)} canComplete={canComplete(task)}
-                    onToggle={() => toggleCompletion(task)} onDelete={() => deleteTask(task.id)} />
-                ))}
-              </section>
-            )}
-            {groupedTasks.specific_days.length > 0 && (
-              <section className="task-section">
-                <h2>Specific Days</h2>
-                {groupedTasks.specific_days.map(task => (
-                  <TaskCard key={task.id} task={task} label={getFrequencyLabel(task)}
-                    completed={isCompleted(task)} canComplete={canComplete(task)}
-                    onToggle={() => toggleCompletion(task)} onDelete={() => deleteTask(task.id)} />
-                ))}
-              </section>
-            )}
-            {groupedTasks.weekly.length > 0 && (
-              <section className="task-section">
-                <h2>Weekly</h2>
-                {groupedTasks.weekly.map(task => (
-                  <TaskCard key={task.id} task={task} label={getFrequencyLabel(task)}
-                    completed={isCompleted(task)} canComplete={canComplete(task)}
-                    onToggle={() => toggleCompletion(task)} onDelete={() => deleteTask(task.id)} />
-                ))}
-              </section>
-            )}
-          </>
-        )}
-      </main>
 
-      <button className="fab" onClick={() => setShowModal(true)}>+</button>
+          <main className="main">
+            {tasks.length === 0 ? (
+              <div className="empty-state">
+                <p>No routines yet</p>
+                <p className="empty-hint">Tap + to add your first routine</p>
+              </div>
+            ) : (
+              <>
+                {groupedTasks.daily.length > 0 && (
+                  <section className="task-section">
+                    <h2>Daily</h2>
+                    {groupedTasks.daily.map(task => (
+                      <TaskCard key={task.id} task={task} label={getFrequencyLabel(task)}
+                        completed={isCompleted(task)} canComplete={canComplete(task)}
+                        onToggle={() => toggleCompletion(task)} onDelete={() => deleteTask(task.id)} />
+                    ))}
+                  </section>
+                )}
+                {groupedTasks.specific_days.length > 0 && (
+                  <section className="task-section">
+                    <h2>Specific Days</h2>
+                    {groupedTasks.specific_days.map(task => (
+                      <TaskCard key={task.id} task={task} label={getFrequencyLabel(task)}
+                        completed={isCompleted(task)} canComplete={canComplete(task)}
+                        onToggle={() => toggleCompletion(task)} onDelete={() => deleteTask(task.id)} />
+                    ))}
+                  </section>
+                )}
+                {groupedTasks.weekly.length > 0 && (
+                  <section className="task-section">
+                    <h2>Weekly</h2>
+                    {groupedTasks.weekly.map(task => (
+                      <TaskCard key={task.id} task={task} label={getFrequencyLabel(task)}
+                        completed={isCompleted(task)} canComplete={canComplete(task)}
+                        onToggle={() => toggleCompletion(task)} onDelete={() => deleteTask(task.id)} />
+                    ))}
+                  </section>
+                )}
+              </>
+            )}
+          </main>
 
-      {showModal && <AddTaskModal onSave={addTask} onClose={() => setShowModal(false)} />}
+          <button className="fab" onClick={() => setShowModal(true)}>+</button>
+          {showModal && <AddTaskModal onSave={addTask} onClose={() => setShowModal(false)} />}
+        </>
+      )}
+
+      {view === 'dashboard' && <Dashboard tasks={tasks} />}
     </div>
   );
 }
@@ -354,6 +365,218 @@ function AddTaskModal({ onSave, onClose }) {
             <button type="submit" className="save-btn">Save</button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function Dashboard({ tasks }) {
+  const now = new Date();
+  const [currentMonth, setCurrentMonth] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
+  const [allCompletions, setAllCompletions] = useState({});
+
+  const pad = (n) => String(n).padStart(2, '0');
+
+  useEffect(() => {
+    supabase.from('completions').select('task_id, date_key').then(({ data }) => {
+      const byDate = {};
+      (data || []).forEach(c => {
+        if (!byDate[c.date_key]) byDate[c.date_key] = new Set();
+        byDate[c.date_key].add(c.task_id);
+      });
+      setAllCompletions(byDate);
+    });
+  }, []);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const isCurrentMonth = currentMonth.getFullYear() === now.getFullYear() &&
+    currentMonth.getMonth() === now.getMonth();
+
+  const generateCalendarDays = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDayOfWeek = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const days = [];
+    for (let i = 0; i < firstDayOfWeek; i++) days.push(null);
+    for (let d = 1; d <= daysInMonth; d++) days.push(new Date(year, month, d));
+    return days;
+  };
+
+  const generateMonthDays = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    return Array.from({ length: daysInMonth }, (_, i) => new Date(year, month, i + 1));
+  };
+
+  const getMonthWeeks = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const getMondayInfo = (date) => {
+      const d = new Date(date);
+      const day = d.getDay();
+      d.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
+      d.setHours(0, 0, 0, 0);
+      return { key: `week_${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, monday: new Date(d) };
+    };
+    const weeks = [];
+    const seen = new Set();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const { key, monday } = getMondayInfo(new Date(year, month, d));
+      if (!seen.has(key)) { seen.add(key); weeks.push({ key, monday }); }
+    }
+    return weeks;
+  };
+
+  const getOverallDayStats = (date) => {
+    const dayOfWeek = date.getDay();
+    const dateKey = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    const expected = tasks.filter(t =>
+      t.frequency === 'daily' ||
+      (t.frequency === 'specific_days' && t.specific_days.includes(dayOfWeek))
+    );
+    if (expected.length === 0) return { expected: 0, completed: 0, percentage: null };
+    const completedSet = allCompletions[dateKey] || new Set();
+    const completed = expected.filter(t => completedSet.has(t.id)).length;
+    return { expected: expected.length, completed, percentage: Math.round((completed / expected.length) * 100) };
+  };
+
+  const getOverallCellClass = (date) => {
+    const d = new Date(date); d.setHours(0, 0, 0, 0);
+    if (d > today) return 'future';
+    const { percentage } = getOverallDayStats(date);
+    if (percentage === null) return 'no-tasks';
+    if (percentage === 0) return 'zero';
+    if (percentage < 50) return 'low';
+    if (percentage < 100) return 'medium';
+    return 'full';
+  };
+
+  const isToday = (date) => {
+    const d = new Date(date); d.setHours(0, 0, 0, 0);
+    return d.getTime() === today.getTime();
+  };
+
+  const calendarDays = generateCalendarDays();
+  const monthDays = generateMonthDays();
+  const monthWeeks = getMonthWeeks();
+  const monthLabel = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  return (
+    <div className="dashboard">
+      <div className="calendar-nav">
+        <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}>‹</button>
+        <span>{monthLabel}</span>
+        <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} disabled={isCurrentMonth}>›</button>
+      </div>
+
+      <div className="calendar-grid">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+          <div key={d} className="calendar-day-name">{d}</div>
+        ))}
+        {calendarDays.map((date, i) => {
+          if (!date) return <div key={`empty-${i}`} className="calendar-cell empty" />;
+          const stats = getOverallDayStats(date);
+          return (
+            <div
+              key={date.toISOString()}
+              className={`calendar-cell ${getOverallCellClass(date)} ${isToday(date) ? 'today' : ''}`}
+              title={stats.expected > 0 ? `${stats.completed}/${stats.expected} completed` : ''}
+            >
+              <span className="day-number">{date.getDate()}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="legend">
+        <span className="legend-label">Less</span>
+        <div className="legend-dot zero" />
+        <div className="legend-dot low" />
+        <div className="legend-dot medium" />
+        <div className="legend-dot full" />
+        <span className="legend-label">More</span>
+      </div>
+
+      {tasks.length > 0 && (
+        <div className="routine-rows">
+          <h3 className="routine-rows-title">By Routine</h3>
+          {tasks.map(task => (
+            <RoutineRow
+              key={task.id}
+              task={task}
+              monthDays={monthDays}
+              monthWeeks={monthWeeks}
+              allCompletions={allCompletions}
+              today={today}
+              pad={pad}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RoutineRow({ task, monthDays, monthWeeks, allCompletions, today, pad }) {
+  const isWeekly = task.frequency === 'weekly';
+
+  const getDayStatus = (date) => {
+    const d = new Date(date); d.setHours(0, 0, 0, 0);
+    if (d > today) return 'future';
+    const isExpected = task.frequency === 'daily' ||
+      (task.frequency === 'specific_days' && task.specific_days.includes(date.getDay()));
+    if (!isExpected) return 'not-expected';
+    const dateKey = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    return (allCompletions[dateKey] || new Set()).has(task.id) ? 'done' : 'missed';
+  };
+
+  const getWeekStatus = ({ key, monday }) => {
+    const m = new Date(monday); m.setHours(0, 0, 0, 0);
+    if (m > today) return 'future';
+    return (allCompletions[key] || new Set()).has(task.id) ? 'done' : 'missed';
+  };
+
+  let expected = 0, completed = 0;
+  if (isWeekly) {
+    monthWeeks.forEach(w => {
+      const m = new Date(w.monday); m.setHours(0, 0, 0, 0);
+      if (m <= today) {
+        expected++;
+        if ((allCompletions[w.key] || new Set()).has(task.id)) completed++;
+      }
+    });
+  } else {
+    monthDays.forEach(date => {
+      const d = new Date(date); d.setHours(0, 0, 0, 0);
+      if (d <= today) {
+        const isExpected = task.frequency === 'daily' ||
+          (task.frequency === 'specific_days' && task.specific_days.includes(date.getDay()));
+        if (isExpected) {
+          expected++;
+          const dateKey = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+          if ((allCompletions[dateKey] || new Set()).has(task.id)) completed++;
+        }
+      }
+    });
+  }
+  const pct = expected > 0 ? Math.round((completed / expected) * 100) : null;
+
+  return (
+    <div className="routine-row">
+      <div className="routine-row-header">
+        <span className="routine-row-name">{task.name}</span>
+        {pct !== null && <span className="routine-row-pct">{pct}%</span>}
+      </div>
+      <div className="routine-row-squares">
+        {isWeekly
+          ? monthWeeks.map(w => <div key={w.key} className={`routine-square ${getWeekStatus(w)}`} />)
+          : monthDays.map(date => <div key={date.toISOString()} className={`routine-square ${getDayStatus(date)}`} />)
+        }
       </div>
     </div>
   );
