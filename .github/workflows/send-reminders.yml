@@ -11,6 +11,6 @@ jobs:
     steps:
       - name: Trigger reminder API
         run: |
-          curl -s -o /dev/null -w "%{http_code}" \
+          curl -s -w "\nHTTP %{http_code}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             https://routine-tracker-liard.vercel.app/api/send-reminders
