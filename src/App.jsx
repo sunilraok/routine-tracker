@@ -624,6 +624,7 @@ function SettingsView({ session }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     supabase
@@ -648,17 +649,23 @@ function SettingsView({ session }) {
   };
 
   const enableNotifications = async () => {
-    const perm = await Notification.requestPermission();
-    setPermission(perm);
-    if (perm !== 'granted') return;
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_VAPID_PUBLIC_KEY),
-    });
-    const subJson = sub.toJSON();
-    setSubscription(subJson);
-    await saveToSupabase(subJson, reminderTime ? localToUtc(reminderTime) : null);
+    setError('');
+    try {
+      const perm = await Notification.requestPermission();
+      setPermission(perm);
+      if (perm !== 'granted') return;
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_VAPID_PUBLIC_KEY),
+      });
+      const subJson = sub.toJSON();
+      setSubscription(subJson);
+      await saveToSupabase(subJson, reminderTime ? localToUtc(reminderTime) : null);
+    } catch (err) {
+      console.error('Notification setup failed:', err);
+      setError(err.message || 'Failed to enable notifications');
+    }
   };
 
   const disableNotifications = async () => {
@@ -693,6 +700,7 @@ function SettingsView({ session }) {
             <button className="save-btn settings-btn" onClick={enableNotifications}>
               Enable notifications
             </button>
+            {error && <p className="auth-error" style={{marginTop: '0.5rem'}}>{error}</p>}
           </>
         ) : (
           <>
