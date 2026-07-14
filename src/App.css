@@ -537,6 +537,66 @@ body {
 .routine-square.not-expected { background: transparent; }
 .routine-square.future { background: var(--surface); opacity: 0.4; }
 
+/* Settings */
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-bottom: 2rem;
+}
+
+.settings-section h2 {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+}
+
+.settings-hint {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.settings-active {
+  font-size: 0.875rem;
+  color: var(--success);
+  margin-bottom: 1rem;
+}
+
+.settings-btn {
+  width: 100%;
+}
+
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.settings-row label {
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.settings-row input[type="time"] {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  padding: 0.375rem 0.625rem;
+  color-scheme: dark;
+}
+
+.settings-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
 /* Auth */
 .login-page {
   min-height: 100vh;

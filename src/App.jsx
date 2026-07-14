@@ -3,9 +3,40 @@ import { supabase } from './supabase';
 import { getDayOfWeek, getDayName, getWeekRange, getTodayDateKey, getWeekDateKey } from './hooks';
 import './App.css';
 
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+}
+
+function localToUtc(localTime) {
+  const [h, m] = localTime.split(':').map(Number);
+  const date = new Date();
+  date.setHours(h, m, 0, 0);
+  const roundedMinutes = Math.round(date.getUTCMinutes() / 5) * 5;
+  const overflow = roundedMinutes >= 60;
+  const hours = String(overflow ? (date.getUTCHours() + 1) % 24 : date.getUTCHours()).padStart(2, '0');
+  const minutes = String(overflow ? 0 : roundedMinutes).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+function utcToLocal(utcTime) {
+  const [h, m] = utcTime.split(':').map(Number);
+  const date = new Date();
+  date.setUTCHours(h, m, 0, 0);
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
 function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -229,6 +260,7 @@ function TrackerApp({ session }) {
       <div className="tab-nav">
         <button className={`tab ${view === 'routines' ? 'active' : ''}`} onClick={() => setView('routines')}>Routines</button>
         <button className={`tab ${view === 'dashboard' ? 'active' : ''}`} onClick={() => setView('dashboard')}>Dashboard</button>
+        <button className={`tab ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')}>Settings</button>
       </div>
 
       {view === 'routines' && (
@@ -291,6 +323,7 @@ function TrackerApp({ session }) {
       )}
 
       {view === 'dashboard' && <Dashboard tasks={tasks} />}
+      {view === 'settings' && <SettingsView session={session} />}
     </div>
   );
 }
@@ -578,6 +611,112 @@ function RoutineRow({ task, monthDays, monthWeeks, allCompletions, today, pad })
           : monthDays.map(date => <div key={date.toISOString()} className={`routine-square ${getDayStatus(date)}`} />)
         }
       </div>
+    </div>
+  );
+}
+
+function SettingsView({ session }) {
+  const [permission, setPermission] = useState(
+    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  );
+  const [subscription, setSubscription] = useState(null);
+  const [reminderTime, setReminderTime] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .from('user_settings')
+      .select('reminder_time, push_subscription')
+      .eq('user_id', session.user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          if (data.reminder_time) setReminderTime(utcToLocal(data.reminder_time));
+          if (data.push_subscription) setSubscription(data.push_subscription);
+        }
+        setLoading(false);
+      });
+  }, []);
+
+  const saveToSupabase = async (sub, time) => {
+    await supabase.from('user_settings').upsert(
+      { user_id: session.user.id, push_subscription: sub, reminder_time: time, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' }
+    );
+  };
+
+  const enableNotifications = async () => {
+    const perm = await Notification.requestPermission();
+    setPermission(perm);
+    if (perm !== 'granted') return;
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_VAPID_PUBLIC_KEY),
+    });
+    const subJson = sub.toJSON();
+    setSubscription(subJson);
+    await saveToSupabase(subJson, reminderTime ? localToUtc(reminderTime) : null);
+  };
+
+  const disableNotifications = async () => {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) await sub.unsubscribe();
+    setSubscription(null);
+    setReminderTime('');
+    await saveToSupabase(null, null);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    await saveToSupabase(subscription, reminderTime ? localToUtc(reminderTime) : null);
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  if (loading) return <div className="loading">Loading…</div>;
+
+  return (
+    <div className="settings">
+      <section className="settings-section">
+        <h2>Notifications</h2>
+
+        {permission === 'denied' ? (
+          <p className="settings-hint">Notifications are blocked in your browser. Update your browser settings to enable them.</p>
+        ) : !subscription ? (
+          <>
+            <p className="settings-hint">Get a daily push notification to remind you to check off your routines.</p>
+            <button className="save-btn settings-btn" onClick={enableNotifications}>
+              Enable notifications
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="settings-active">✓ Notifications enabled</p>
+            <div className="settings-row">
+              <label htmlFor="reminder-time">Daily reminder time</label>
+              <input
+                id="reminder-time"
+                type="time"
+                value={reminderTime}
+                onChange={(e) => setReminderTime(e.target.value)}
+              />
+            </div>
+            <div className="settings-actions">
+              <button className="save-btn" onClick={handleSave} disabled={saving}>
+                {saved ? 'Saved!' : saving ? 'Saving…' : 'Save'}
+              </button>
+              <button className="cancel-btn" onClick={disableNotifications}>
+                Disable
+              </button>
+            </div>
+          </>
+        )}
+      </section>
     </div>
   );
 }
