@@ -722,6 +722,13 @@ function SettingsView({ session }) {
                 Disable
               </button>
             </div>
+            <button
+              className="cancel-btn"
+              style={{ marginTop: '0.75rem', width: '100%' }}
+              onClick={() => new Notification('Routine Tracker', { body: "Test — notifications are working!" })}
+            >
+              Send test notification
+            </button>
           </>
         )}
       </section>
