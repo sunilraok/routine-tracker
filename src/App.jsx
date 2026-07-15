@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabase';
 import { getDayOfWeek, getDayName, getWeekRange, getTodayDateKey, getWeekDateKey } from './hooks';
 import './App.css';
@@ -125,7 +126,11 @@ function TrackerApp({ session }) {
   const [completions, setCompletions] = useState(new Set());
   const [showModal, setShowModal] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
-  const [view, setView] = useState('routines');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const view = location.pathname === '/dashboard' ? 'dashboard'
+    : location.pathname === '/settings' ? 'settings'
+    : 'routines';
 
   const today = getDayOfWeek();
 
@@ -258,9 +263,9 @@ function TrackerApp({ session }) {
       </header>
 
       <div className="tab-nav">
-        <button className={`tab ${view === 'routines' ? 'active' : ''}`} onClick={() => setView('routines')}>Routines</button>
-        <button className={`tab ${view === 'dashboard' ? 'active' : ''}`} onClick={() => setView('dashboard')}>Dashboard</button>
-        <button className={`tab ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')}>Settings</button>
+        <button className={`tab ${view === 'routines' ? 'active' : ''}`} onClick={() => navigate('/')}>Routines</button>
+        <button className={`tab ${view === 'dashboard' ? 'active' : ''}`} onClick={() => navigate('/dashboard')}>Dashboard</button>
+        <button className={`tab ${view === 'settings' ? 'active' : ''}`} onClick={() => navigate('/settings')}>Settings</button>
       </div>
 
       {view === 'routines' && (
