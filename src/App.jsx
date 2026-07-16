@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabase';
-import { getDayOfWeek, getDayName, getWeekRange, getTodayDateKey, getWeekDateKey } from './hooks';
+import { getDayOfWeek, getDayName, getTodayDateKey, getWeekDateKey } from './hooks';
 import './App.css';
 
 function urlBase64ToUint8Array(base64String) {
@@ -259,7 +259,6 @@ function TrackerApp({ session }) {
             <button className="sign-out-btn" onClick={handleSignOut}>Sign out</button>
           </div>
         </div>
-        <span className="week-range">{getWeekRange()}</span>
       </header>
 
       <div className="tab-nav">
