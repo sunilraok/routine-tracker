@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabase';
-import { getDayOfWeek, getDayName, getTodayDateKey, getWeekDateKey } from './hooks';
+import { getDayOfWeek, getDayName, getWeekRange, getTodayDateKey, getWeekDateKey } from './hooks';
 import './App.css';
 
 function urlBase64ToUint8Array(base64String) {
@@ -271,7 +271,7 @@ function TrackerApp({ session }) {
         <>
           <div className="stats">
             <div className="stats-label">
-              <span>Weekly Progress</span>
+              <span>Weekly Progress <span className="week-range">{getWeekRange()}</span></span>
               <span>{stats.completed}/{stats.total} ({stats.percentage}%)</span>
             </div>
             <div className="progress-bar">
