@@ -503,6 +503,15 @@ function Dashboard({ tasks }) {
   const monthWeeks = getMonthWeeks();
   const monthLabel = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
 
+  if (tasks.length === 0) {
+    return (
+      <div className="empty-state">
+        <p>No routines yet</p>
+        <p className="empty-hint">Add routines in the Routines tab to see your progress here</p>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard">
       <div className="calendar-nav">
